@@ -1,0 +1,914 @@
+% !TeX program = xelatex
+
+\documentclass[8pt, aspectratio=169]{beamer}
+
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{minted}
+\usepackage{multicol}
+\usepackage{unicode-math}
+
+\setlength{\columnsep}{0pt}
+
+\usemintedstyle{monokai}
+\setminted{autogobble}
+\setminted{baselinestretch=1.0}
+\newminted{rust}{}
+\newmintinline{rust}{}
+
+\title{Introduction to Rust}
+\author{Alex Steele}
+\date{January 20, 2024}
+\institute[UBC]{University of British Columbia}
+
+\usetheme[progressbar=frametitle]{metropolis}
+
+\setmonofont{CMU Typewriter Text}
+
+\definecolor{VividCerulean}{HTML}{009de0}  
+\definecolor{MaastrichtBlue}{HTML}{011936}
+\definecolor{BlueSapphire}{HTML}{19647e}
+\definecolor{DarkSlate}{HTML}{204B57}
+\definecolor{MidnightBlue}{HTML}{1b3b6f}
+\definecolor{SpaceCadet}{HTML}{21295c}
+\definecolor{DutchWhite}{HTML}{a4c2a5}
+\definecolor{Box1}{HTML}{432e36}
+\definecolor{Box2}{HTML}{260c1a}
+\definecolor{Alert1}{HTML}{e55829}
+\definecolor{Alert2}{HTML}{bc4622 }
+\definecolor{Example1}{HTML}{2f9c95}
+\definecolor{Example2}{HTML}{3f3f3f}%{21706b}
+\definecolor{CodeBG}{HTML}{131515}
+\definecolor{CodeFG}{HTML}{2b2c28}
+\definecolor{BackgroundColor}{HTML}{191919}
+
+\setbeamercolor{frametitle}{bg=BackgroundColor, fg=white}
+\setbeamercolor{frame}{bg=BackgroundColor, fg=white}
+\setbeamercolor{progress bar}{fg=VividCerulean, bg=SpaceCadet}
+\setbeamercolor{background canvas}{bg=BackgroundColor, fg=white}
+\setbeamercolor{palette primary}{fg=white, bg=SpaceCadet}
+\setbeamercolor{normal text}{fg=white, bg=SpaceCadet} 
+\setbeamercolor{block title}{fg=white, bg=Alert1}
+\setbeamercolor{block body}{fg=white, bg=Alert2}
+\setbeamercolor{block title alerted}{fg=white, bg=Alert1}
+\setbeamercolor{block body alerted}{fg=white, bg=Alert2}
+\setbeamercolor{block title example}{fg=white, bg=Example1}
+\setbeamercolor{block body example}{fg=white, bg=Example2}
+\setbeamercolor{alerted text}{fg=VividCerulean}
+\setbeamercolor{itemize item}{fg=white}
+
+\metroset{block=fill}
+
+% Extremely cursed hack to get the modulo operator in a \mintinline.
+% https://tex.stackexchange.com/questions/331695
+\ExplSyntaxOn
+\NewDocumentCommand{\mintedstring}{mv}
+ {
+  \tl_clear_new:c { l_minted_string_#1_tl }
+  \tl_set:cn { l_minted_string_#1_tl } { #2 }
+ }
+\NewDocumentCommand{\mintinlinestring}{mm}
+ {
+  \minted_inline_string:nv { #1 } { l_minted_string_#2_tl }
+ }
+\cs_new_protected:Nn \minted_inline_string:nn
+ {
+  \mintinline{#1}{#2}
+ }
+\cs_generate_variant:Nn \minted_inline_string:nn { nv }
+\ExplSyntaxOff
+
+\setbeamertemplate{footline}
+{
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=.3\paperwidth,ht=2.25ex,dp=1ex,center]{frametitle}%
+    \usebeamerfont{author in head/foot}\insertshortauthor \ (\insertshortinstitute)
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.47\paperwidth,ht=2.25ex,dp=1ex,center]{frametitle}%
+    \usebeamerfont{title in head/foot}\insertshorttitle\hspace*{3em}
+  \end{beamercolorbox}}%
+  \begin{beamercolorbox}[wd=.23\paperwidth,ht=2.25ex,dp=1ex,center]{frametitle}%    
+    \insertframenumber{} \hspace*{1ex}
+  \end{beamercolorbox}%
+  \vskip0pt%
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Who is this guy?}
+\begin{block}{About Me}
+\begin{itemize}
+\item Fourth Year Combined Honours Computer Science and Physics at UBC
+\item Interests include
+\begin{itemize}
+\item Reinforcement Learning
+\item Robotics Control and Safety
+\item Low-Level Application and Embedded Development
+\item High-Performance Computing
+\end{itemize}
+\end{itemize}
+\end{block}
+\begin{block}{Experience}
+\begin{itemize}
+\item Lead CPSC 110 Teaching Assistant, UBC Computer Science (2020--2024)
+\item Crash Safety Software Engineer Intern, Tesla (2022, 2023)
+\item Numerical Methods Research Assistant, UBC Computer Science (2022)
+\item Satellite Software Engineer Intern, Kepler Communications (2021)
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Why Rust?}
+\begin{block}{Performance}
+\begin{multicols}{2}
+\begin{itemize}
+\item Compiled to machine code
+\item No garbage collection
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item Zero-cost abstractions
+\item Built on LLVM
+\end{itemize}
+\end{multicols}
+\end{block}
+\begin{block}{Versatility}
+\begin{multicols}{2}
+\begin{itemize}
+\item Embedded development
+\item Game development
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item Scientific computing
+\item Web development
+\end{itemize}
+\end{multicols}
+\end{block}
+\begin{block}{Safety}
+\begin{multicols}{2}
+\begin{itemize}
+\item Algebraic type system
+\item No undefined behaviour
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item Memory safety
+\item Safe parallelism
+\end{itemize}
+\end{multicols}
+\end{block}
+\end{frame}
+
+\begin{frame}{Resources}
+\begin{itemize}
+\item Installation: \alert{\href{https://rust-lang.org/tools/install}{rust-lang.org/tools/install}}
+\item Learning: \alert{\href{https://rust-lang.org/learn}{rust-lang.org/learn}}
+\begin{itemize}
+\item The Book: \alert{\href{https://doc.rust-lang.org/book}{doc.rust-lang.org/book}}
+\item Standard Library: \alert{\href{https://doc.rust-lang.org/std}{doc.rust-lang.org/std}}
+\end{itemize}
+\item Playground: \alert{\href{https://play.rust-lang.org}{play.rust-lang.org}}
+\item These Slides: \alert{\href{https://github.com/ADSteele916/nwhacks2024-talk}{github.com/ADSteele916/nwhacks2024-talk}}
+\item Hugo's Slides: \alert{\href{https://github.com/hugwijst/rust-primer}{github.com/hugwijst/rust-primer}}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Cargo: Your New Best Friend}
+\begin{block}{Package Management}
+\begin{multicols}{4}
+\begin{itemize}
+\item \rustinline|cargo new|
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item \rustinline|cargo init|
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item \rustinline|cargo add|
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item \rustinline|cargo remove|
+\end{itemize}
+\end{multicols}
+\end{block}
+
+\begin{block}{Linting, Building, Testing}
+\begin{multicols}{3}
+\begin{itemize}
+\item \rustinline|cargo clippy|
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item \rustinline|cargo build [--release]|
+\end{itemize}
+\columnbreak
+\begin{itemize}
+\item \rustinline|cargo run [--release]|
+\end{itemize}
+\end{multicols}
+\end{block}
+\end{frame}
+
+\section{Types, Variables, and References}
+
+\begin{frame}{Primitive Types: The Building Blocks}
+\begin{itemize}
+\item \rustinline|bool| (\rustinline|true|, \rustinline|false|)
+\item \rustinline|u8|, \rustinline|u16|, \rustinline|u32|, \rustinline|u64|, \rustinline|u128| (\rustinline|12u8|, \rustinline|b'a'|, \rustinline|65_536u32|)
+\item \rustinline|i8|, \rustinline|i16|, \rustinline|i32|, \rustinline|i64|, \rustinline|i128| (\rustinline|0x1EEFi16|, \rustinline|-3_000_000_000i64|)
+\item \rustinline|usize|, \rustinline|isize| (\rustinline|15usize|, \rustinline|-12isize|)
+\item \rustinline|f32|, \rustinline|f64| (\rustinline|1e24f32|, \rustinline|0.24f64|)
+\item \rustinline|char| (\rustinline|'a'|, \rustinline|'λ'|)
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Variable Assignment}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let x: u32 = 24u32; // fully explicit
+    let x = 16u8;       // inferred type of `x`
+    let x: f32 = 12.;   // inferred type of `12.`
+    let x = 42;         // defaults to isize
+    let x = 42.;        // or f64 when float
+    let x;
+    x = 15;             // deferred assignment
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Type Casting}
+\begin{itemize}
+\item Casting must be done \alert{explicitly}.
+\item Casting between different numeric sizes and signednesses is safe and behaves as you'd expect.
+\end{itemize}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let x: u32 = 12u8;          //< fails to compile!
+    //           ^^^^ expected u32, found u8
+    let x: u32 = 12u64;         //< fails to compile!
+    //           ^^^^^ expected u32, found u64
+    let x: u32 = 12u64 as u32;  // x == 12u32
+    let a = 12.6 as u32;        // x == 12u32
+    let b = 400u16 as u8;       // x == 144u8
+    let c = -3i8 as u8;         // x == 253u8
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Mutability}
+\begin{itemize}
+\item Variables in Rust are immutable by default.
+\item To make a variable mutable, add a \rustinline|mut| to the declaration.
+\end{itemize}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let x = 41;
+    x = 42;         //< fails to compile!
+//  ^^^^^^ cannot assign twice to immutable variable
+    let x = 42;
+ 
+    let mut y = 41;
+    y = 42;
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{References}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let x = 41u32;
+    let r: &u32 = &x;
+    assert_eq!(x, 41);
+    assert_eq!(*r, 41);
+    let r2: &u32;
+    assert_eq!(*r2, 4); //< fails to compile!
+    //      ^^ use of possibly uninitialized `*r2`
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Mutable References}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let x = 41u32;
+    let r: &u32 = &x;
+    assert_eq!(*r, 41);
+    let y = 42;
+    r = &y;  //< fails to compile!
+//  ^^^^^^ cannot assign twice to immutable variable
+    let mut s = &y;
+    assert_eq!(*s, 42);
+    s = &x;
+    assert_eq!(*s, 41);
+    *s = 4; //< fails to compile!
+//  ^^^^^^ `s` is a `&` reference, so the data it refers to
+//         cannot be written
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{References to Mutable Data}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let mut x = 41;
+    let r: &mut u32 = &mut x;
+    assert_eq!(*r, 41);
+    
+    *r = 42;
+    assert_eq!(*r, 42);
+    assert_eq!(x, 42);
+ 
+    let x = 41u32;
+    let r: &mut u32 = &mut x; //< fails to compile!
+    //                ^^^^^^ cannot borrow as mutable
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{The Borrowing Rule: Your New Worst Enemy}
+\begin{definition}[Borrowing Rule]
+A variable may have either (but not both)
+\begin{itemize}
+\item an arbitrarily-large number of immutable borrows or
+\item one mutable borrow.
+\end{itemize}
+\end{definition}
+\begin{exampleblock}{Example}
+\begin{rustcode}
+fn main() {
+    let mut x = 41;
+    let r = &x;
+    //      -- immutable borrow occurs here
+    let r_mut = &mut x;
+    //          ^^^^^^ mutable borrow occurs here
+    assert_eq!(*r, *r_mut); //< fails to compile!
+    //      -- immutable borrow later used here
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\section{Operators, Expressions, and Control Flow}
+\mintedstring{percent}{%}
+\mintedstring{percentequals}{%=}
+\begin{frame}{Operators}
+\begin{itemize}
+\item numeric (\rustinline|+|, \rustinline|-|, \rustinline|*|, \rustinline|/|, \mintinlinestring{Rust}{percent})
+\item bitwise (\rustinline|&|, \rustinline/|/, \rustinline|^|, \rustinline|<<|, \rustinline|>>|)
+\item comparison (\rustinline|==|, \rustinline|!=|, \rustinline|>|, \rustinline|<|, \rustinline|>=|, \rustinline|<=|)
+\item logical (\rustinline/||/, \rustinline|&&|)
+\item number negation (\rustinline|-|)
+\item boolean negation (\rustinline|!|)
+\item number bitwise negation (\rustinline|!|)
+\item assignment (\rustinline|=|)
+\item compound assignment (\rustinline|+=|, \rustinline|-=|, \rustinline|*=|, \rustinline|/=|, \mintinlinestring{Rust}{percentequals}, \rustinline|&=|, \rustinline/|=/, \rustinline|^=|, \rustinline|<<=|, \rustinline|>>=|)
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{If Expressions (No, they're not statements.)}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let a = 8;
+    let x = 3;
+    let y = if x % 2 == 1 {
+        a - 1
+    } else {
+        a + 1
+    };
+    if y == 7 {
+        println!("Hello!");
+    } else if y == 9 {
+        println!("Hi!");
+    } else {
+        println!("Howdy!");
+    }
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Functions}
+\begin{exampleblock}{Example}
+\begin{onlyenv}<1>
+\begin{rustcode}
+fn min(a: usize, b: usize) -> usize {
+    let ret;
+    if a < b {
+        ret = a;
+    } else {
+        ret = b;
+    }
+    return ret;
+}
+ 
+fn main() {
+    assert_eq!(min(5,8), 5);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<2>
+\begin{rustcode}
+fn min(a: usize, b: usize) -> usize {
+    let ret;
+    if a < b {
+        ret = a;
+    } else {
+        ret = b;
+    }
+    ret
+}
+ 
+fn main() {
+    assert_eq!(min(5,8), 5);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<3>
+\begin{rustcode}
+fn min(a: usize, b: usize) -> usize {
+    let ret = if a < b { a } else { b };
+    ret
+}
+
+fn main() {
+    assert_eq!(min(5,8), 5);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<4>
+\begin{rustcode}
+fn min(a: usize, b: usize) -> usize {
+    if a < b { a } else { b }
+}
+
+fn main() {
+    assert_eq!(min(5,8), 5);
+}
+\end{rustcode}
+\end{onlyenv}
+\end{exampleblock}
+\begin{onlyenv}<4>
+\begin{center}
+Seem familiar?
+\end{center}
+\end{onlyenv}
+\end{frame}
+
+\begin{frame}[fragile]{Loops}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let start = 3;
+    let mut x = start;
+    while x > 0 {
+        println!("down = {}", x);
+        x -= 1;
+    }
+    let end = loop {
+        println!("up = {}", x);
+        x += 1;
+ 
+        if x >= start { break x; }
+    };
+    assert_eq!(end, start);
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{For Loops (Version 0.1)}
+\begin{exampleblock}{Example}
+\begin{rustcode}
+fn main() {
+    let mut x = 0;
+    for i in 1..5 {
+        x += i;
+    }
+    assert_eq!(x, 1 + 2 + 3 + 4);
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\section{Algebraic Data Types}
+
+\begin{frame}[fragile]{Product Types: Structs}
+\begin{onlyenv}<1>
+\begin{exampleblock}{Example}
+\begin{rustcode}
+pub struct S {
+    pub field1: u32,
+    field2: f64,
+}
+impl S {
+    pub fn new(s: u32) -> S {
+        let field1 = s + 1;
+        S {
+            field1,
+            field2: 0.0,
+        }
+    }
+    pub fn zero(&self) -> bool {
+        self.field1 == 0 && self.field2 == 0.0
+    }
+    pub fn increment(&mut self) {
+        self.field2 += 1.6;
+    }
+}
+\end{rustcode}
+\end{exampleblock}
+\end{onlyenv}
+\begin{onlyenv}<2>
+\begin{exampleblock}{Example}
+\begin{rustcode}
+pub struct S {
+    pub field1: u32,
+    field2: f64,
+}
+impl S {
+    pub fn new(s: u32) -> Self {
+        let field1 = s + 1;
+        S {
+            field1,
+            field2: 0.0,
+        }
+    }
+    pub fn zero(&self) -> bool {
+        self.field1 == 0 && self.field2 == 0.0
+    }
+    pub fn increment(&mut self) {
+        self.field2 += 1.6;
+    }
+}
+\end{rustcode}
+\end{exampleblock}
+\end{onlyenv}
+\end{frame}
+
+\begin{frame}[fragile]{Sum Types: Enums}
+\begin{exampleblock}{Example}
+\begin{rustcode}
+pub enum E {
+    Variant1,
+    Variant2(i32),
+    Variant3 {
+        field1: f64,
+        field2: char,
+    }
+}
+impl E {
+    pub fn var2_with_positive(&self) -> bool {
+        match self {
+            E::Variant1 => false,
+            E::Variant2(x) => *x > 0,
+            E::Variant3 { .. } => false,
+        }
+    }
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{The Power of Algebraic Types: Options and Results}
+\begin{definition}[Option]
+The Option type represents a value that may or may not be present. It takes the place of null in Rust's type system. Unlike null, however, it is impossible to perform some illegal operation on \rustinline|None|.
+\begin{rustcode}
+pub enum Option<T> { // T is a type parameter - any type could substitute for it
+    Some(T),         // (Option<f64>, Option<Vec<u8>>, etc.)
+    None,
+}
+\end{rustcode}
+\end{definition}
+\begin{definition}[Result]
+The Result type is Rust's main mode of error handling. Rather than throwing an exception, a fallible function will return a Result (or panic).
+\begin{rustcode}
+pub enum Result<T, E> {
+   Ok(T),
+   Err(E),
+}
+\end{rustcode}
+\end{definition}
+\end{frame}
+
+\begin{frame}[fragile]{The Question Mark Operator}
+\begin{itemize}
+\item The \rustinline|?| operator will propagate \rustinline|None| and \rustinline|Err(...)|.
+\item It is commonly used when a function requires a valid value from an expression that produces \rustinline|Option<T>| or \rustinline|Result<T, E>|.
+\end{itemize}
+\begin{exampleblock}{Example}
+\begin{onlyenv}<1>
+\begin{rustcode}
+fn solve(problem: Option<u32>) -> Option<u32> {
+    let p = match problem {
+        Some(p) => p,
+        None => return None,
+    }; 
+    Some(p * 42)
+} 
+fn main() {
+    assert_eq!(solve(Some(2)), Some(84));
+    assert_eq!(solve(None), None);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<2>
+\begin{rustcode}
+fn solve(problem: Option<u32>) -> Option<u32> {
+    let p = problem?;
+    Some(p * 42)
+}
+fn main() {
+    assert_eq!(solve(Some(2)), Some(84));
+    assert_eq!(solve(None), None);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<3>
+\begin{rustcode}
+fn solve(problem: Option<u32>) -> Option<u32> {
+    Some(problem? * 42)
+}
+fn main() {
+    assert_eq!(solve(Some(2)), Some(84));
+    assert_eq!(solve(None), None);
+}
+\end{rustcode}
+\end{onlyenv}
+\end{exampleblock}
+\end{frame}
+
+\section{Collections, Slices, and Iterators}
+
+\begin{frame}{Collection Types}
+\begin{itemize}
+\item Arrays (\rustinline|[T; N]|)
+\item Lists
+\begin{itemize}
+\item Vectors (\rustinline|Vec<T>|)
+\item Ring Buffers (\rustinline|VecDeque<T>|)
+\item Doubly-Linked Lists (\rustinline|LinkedList<T>|)
+\end{itemize}
+\item Maps
+\begin{itemize}
+\item Unordered Maps (\rustinline|HashMap<K, V>|)
+\item Ordered Maps (\rustinline|BTreeMap<K, V>|)	
+\end{itemize}
+\item Sets
+\begin{itemize}
+\item Unordered Sets (\rustinline|HashSet<T>|)
+\item Ordered Sets (\rustinline|BTreeSet<T>|)	
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Arrays}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let array: [i32; 3] = [1, 4, -3];
+    assert_eq!(array[0], 1);
+    assert_eq!(array[3], 4);         //< Fails to compile!
+    let n = std::hint::black_box(3); // make the compiler pretend this is dynamic.
+    assert_eq!(array[n], 4);         //< Panics!
+    let all_5s = [5u8; 5];
+    assert_eq!(all_5s, [5, 5, 5, 5, 5]);
+    assert_eq!(all_5s.len(), 5);
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Slices}
+\begin{itemize}
+\item Slices are used to store references to (sub)sequences of elements.
+\item A slice is like a reference, but it also has a length.
+\end{itemize}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let arr1: [i32; 3] = [1, 4, -3];
+    let mut arr_ref: &[i32] = &arr1;
+    assert_eq!(arr_ref[0], 1);
+    assert_eq!(arr_ref[3], 4); //< Panics!
+    let arr2 = [1, 2, 3, 4, 5];
+    arr_ref = &arr2;
+    assert_eq!(*arr_ref, [1, 2, 3, 4, 5]);
+    arr_ref = &arr_ref[2..];
+    assert_eq!(arr_ref, [3, 4, 5]);
+    assert_eq!(arr_ref.len(), 3);
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{String Slices}
+\begin{itemize}
+\item Every string literal in Rust is a slice pointing to some constant location in memory.
+\item A string can be owned through a \rustinline|String| object, which is (almost) a \rustinline|Vec<char>|.
+\begin{itemize}
+\item It's actually a \rustinline|Vec<u8>| for performance reasons.
+\end{itemize}
+\end{itemize}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let hello_world: &str = "Hello World λ!";
+    assert_eq!(hello_world.len(), 15); // in bytes!
+    assert_eq!(hello_world.chars().count(), 14);
+    assert_eq!(&hello_world[..5], "Hello");
+    assert_eq!(&hello_world[..12], "Hello World ");
+    assert_eq!(&hello_world[..13], "Hello World "); //< Panics!
+    assert_eq!("".len(), 0);
+    assert_eq!("\0".len(), 1);
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Vectors}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn first_n_ints(n: u32) -> Vec<u32> {
+    let mut ints = Vec::new();
+    for i in 0..n {
+        ints.push(i);
+    }
+    ints
+}
+fn main() {
+    let mut five_ints = first_n_ints(5);
+    assert!(five_ints.len() == 5);
+    assert!(five_ints[4] == 4); //< Panics when out of bounds!
+    assert!(five_ints.get(5) == None);
+ 
+    five_ints.push(42);
+    assert!(five_ints.len() == 6);
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Aside: Macros}
+\begin{itemize}
+\item Macros operate on source code (more generally, syntax) as data.
+\item They are evaluated into new source code at compile time.
+\item They can be used to provide helpful shorthand for common tasks, like constructing a vector, making an assertion, or printing a string.
+\end{itemize}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+fn main() {
+    let x = vec![2, 5, 6];
+    assert!(!x.is_empty());
+    assert_eq!(x[0], 2);
+    println!("Hello, World!");
+    println!("The second element of x is {}.", x[1]);
+    panic!("Oh no, I'm crashing!");
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Traits}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+trait Reacts {
+    fn react(&self) -> String;
+}
+struct Cat {}
+impl Reacts for Cat {
+    fn react(&self) -> String {
+        String::from("meow")
+    }
+}
+struct Parrot { learnt_sentence: String }
+impl Reacts for Parrot {
+    fn react(&self) -> String { self.learnt_sentence.clone() }
+}
+fn main() {
+    assert_eq!(Cat {}.react(), "meow");
+    let parrot = Parrot { learnt_sentence: String::from("woof") };
+    assert_eq!(parrot.react(), "woof");
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Deriving Traits}
+\begin{exampleblock}{Examples}
+\begin{rustcode}
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+struct Complex {
+    real: f64,
+    imaginary: f64,
+}
+fn main() {
+    let z = Complex::default();
+    let mut a = z;
+    assert_eq!(a, z);
+    a.real = 1.0;
+    assert_ne!(a, z);
+    println!("{:?}", z);
+}
+\end{rustcode}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}[fragile]{Lambdas and Iterators}
+\begin{exampleblock}{Examples}
+\begin{onlyenv}<1>
+\begin{rustcode}
+fn main() {
+    let v: Vec<i32> = vec![2, 1, 9, 139, 2, -2, -5, 760];
+    let mut sum = 0;
+    for a in v.iter() {
+        if a % 2 == 0 {
+            let b = a.abs();
+            sum += b;
+        }
+    }
+    println!("Sum of the absolute values of even elements of v is: {}", sum);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<2>
+\begin{rustcode}
+fn main() {
+    let v: Vec<i32> = vec![2, 1, 9, 139, 2, -2, -5, 760];
+    let mut sum = 0;
+    for a in v.iter().filter(|x| (*x) % 2 == 0) {
+        let b = a.abs();
+        sum += b;
+    }
+    println!("Sum of the absolute values of even elements of v is: {}", sum);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<3>
+\begin{rustcode}
+fn main() {
+    let v: Vec<i32> = vec![2, 1, 9, 139, 2, -2, -5, 760];
+    let mut sum = 0;
+    for b in v.iter().filter(|x| (*x) % 2 == 0).map(|x| x.abs()) {
+        sum += b;
+    }
+    println!("Sum of the absolute values of even elements of v is: {}", sum);
+}
+\end{rustcode}
+\end{onlyenv}
+\begin{onlyenv}<4>
+\begin{rustcode}
+fn main() {
+    let v: Vec<i32> = vec![2, 1, 9, 139, 2, -2, -5, 760];
+    let sum: i32 = v.iter().filter(|x| (*x) % 2 == 0).map(|x| x.abs()).sum();
+    println!("Sum of the absolute values of even elements of v is: {}", sum);
+}
+\end{rustcode}
+\end{onlyenv}
+\end{exampleblock}
+\end{frame}
+
+\begin{frame}{Switching Gears: PyO3}
+\begin{itemize}
+\item Python is a great language. It's expressive, accessible, and there's a package for just about anything.
+\item Problem: Python is slow. It's interpreted, dynamically-typed, and garbage-collected.
+\item But packages like NumPy are fast! How do they do it?
+\begin{itemize}
+\item They're not actually written in Python.
+\end{itemize}
+\item PyO3 lets you write Python libraries in Rust (and run Python in Rust, if you want...).
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Worked Example: Chirper Spam Detection}
+\begin{center}
+Oh yeah, it's live-coding time.
+\end{center}
+\end{frame}
+
+{
+\setbeamertemplate{footline}{}
+\begin{frame}[standout]
+Questions?
+\end{frame}
+}
+
+\end{document}
